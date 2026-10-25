@@ -15,7 +15,7 @@ typedef struct Node {
     struct Node *parent;
     long ID ;
     int childCount;
-    long priority; 
+    double priority; 
     int cost ; 
 } Node;
 
