@@ -103,6 +103,8 @@ bool is_solvable(const char *state)
     return inversions % 2 == 0;
 }
 
+int exploredStates = 0 ;    // 3shan a3rf kam state et3mlt explore
+
 bool puzzFds(Node *root, char* goal , int limit) {
     Stack stack;
     initStack(&stack);
@@ -115,7 +117,6 @@ bool puzzFds(Node *root, char* goal , int limit) {
     
     states_invented[state_to_id(stateNow->state)] = 1 ; // When I explore a node I create X number of states to transistion from this node
                                                         // This array works by bitmasking so I dont have to search the full array in O(n) only o(1) 
-    int exploredStates = 0 ;    // 3shan a3rf kam state et3mlt explore
    
     while (1){  
 
@@ -280,7 +281,7 @@ int main(void)
     // timestamp for the begining of execution to measure the running time of the program
     clock_t start_time = clock();
 
-    char* initialState = "123456780" ;
+    char* initialState = "876543210" ;
 
     int layer = 1 ;
 
@@ -315,7 +316,6 @@ int main(void)
 
 python3 puzzle_viewer.py puzzle_states.txt
 
-gcc -std=c11 -Wall -Wextra dfs.c TreeFoof/tree.c TreeStack/stacktree.c -o DFS
-
-./DFS
+gcc -std=c11 -Wall -Wextra iterativeDFS.c TreeFoof/tree.c TreeStack/stacktree.c -o IDFS
+./IDFS
 */
