@@ -216,7 +216,7 @@ bool puzzFds(Node *root, char* goal) {
                 count++;
                 cursor = cursor->parent;
             }
-
+            
             // Allocate an array of pointers to those nodes.
             Node **path = malloc(count * sizeof *path);
 
