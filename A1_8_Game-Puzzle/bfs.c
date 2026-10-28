@@ -266,7 +266,29 @@ int main(void)
     // timestamp for the begining of execution to measure the running time of the program
     clock_t start_time = clock();
 
-    char* initialState = "123456780" ;
+    // char* initialState = "123456780" ;
+
+    char initialState[10];
+
+    printf("Please enter the initial state of the puzzle (9 digits, 0-8, where 0 represents the blank space): ");
+    scanf("%9s", initialState);
+
+    for (int i = 0; i < 9; i++) {
+        if (initialState[i] < '0' || initialState[i] > '8') {
+            printf("Invalid input. Please enter exactly 9 digits from 0 to 8.\n");
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < 9; i++) {
+        for (int j = i + 1; j < 9; j++) {
+            if (initialState[i] == initialState[j]) {
+                printf("Invalid input. Each digit from 0 to 8 must appear exactly once.\n");
+                return 1;
+            }
+        }
+    }
+    
 
     if (stateCmp(initialState , "012345678")) {
         printf("The Puzzle is solved already ") ;
