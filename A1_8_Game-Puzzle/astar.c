@@ -16,7 +16,7 @@ enum {
 } POSITIONS_t ;
 
 const int FACTORIALS[] = {1, 1, 2, 6, 24, 120, 720, 5040, 40320}; // 3shan 2ady unique ID l kol e7temal
-
+//                        0! 1! 2! 3! , ... hnkml ya3ny lehad 8! lol
 // 3shan a compare 3add 2 states 
 bool stateCmp(char* state , char* goal){
     for (int i = 0 ; i < 9 ; i++){
@@ -49,7 +49,7 @@ int computeManhattan(Node* thisState){
     for (int i = 0 ; i < 9 ; i++){
         int value = thisState->state[i] - '0' ;
         if ( value == 0 )    
-            continue;       // we shall execlude el blank (zero) 3shan yb2a admissable 
+            continue;       // we shall execlude el blank (zero) 3shan yb2a admissable blah blah la2tha 3la el net el sara7a we ektn3t
         int xCurr = i / 3 ;
         int yCurr = i % 3 ;
         heur+= ( abs(xCurr - xGoals[value]) +abs(yCurr - yGoals[value]) ) ;
