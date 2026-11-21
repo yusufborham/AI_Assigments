@@ -8,6 +8,14 @@ Run all commands from the project’s `connect4` folder.
 
 ## Play against the AI
 
+- For the first time the terminal and change your directory to the one you cloned the project in
+- Then run this command to make the bash file executable
+
+``` bash
+chmod 777 runGame.sh
+```
+
+
 ```bash
 bash runGame.sh 8 true
 ```
@@ -18,6 +26,14 @@ bash runGame.sh 8 true
 | 2 | `true` | Enable alpha-beta pruning. Use `false` to disable it. |
 
 ## Watch two AIs play
+
+- For the first time the terminal and change your directory to the one you cloned the project in
+- Then run this command to make the bash file executable 
+
+``` bash 
+chmod 777 OneVsOne.sh
+```
+
 
 ```bash
 bash OneVsOne.sh 8 4
