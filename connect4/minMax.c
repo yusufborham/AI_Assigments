@@ -132,10 +132,8 @@ void scanVertical(char *board, int *nextFreeRow, int *connect4CountMax, int *con
             }                    
             if (ID == XXXX)
                 (*connect4CountMax)++;
-            else if ((ID == XXX_) ){
+            else if ((ID == XXX_) )
                 (*connect3CountMax)++;
-                printf("he he %d %d \n" , colCursor , startcursor) ;
-            }
                            
             ///////////////////////////////////////////////////
             else if (ID == OOOO)
@@ -243,9 +241,10 @@ static const struct {
     }},
 };
 
-void runScanTests(void)
+unsigned long long runScanTests(void)
 {
     size_t testCount = sizeof scanTestBoards / sizeof scanTestBoards[0];
+    unsigned long long checksum = 0;
 
     for (size_t test = 0; test < testCount; ++test) {
         char board[ROWS * COLS];
@@ -275,13 +274,18 @@ void runScanTests(void)
                      &connect4CountMin, &connect3CountMin);
         scanDiagonal(board, nextFreeRow, &connect4CountMax, &connect3CountMax,
                      &connect4CountMin, &connect3CountMin);
+       
+        checksum += connect4CountMax + 10ULL * connect3CountMax
+          + 100ULL * connect4CountMin + 1000ULL * connect3CountMin;
 
         // printf("\nTest %zu - %s\n", test + 1, scanTestBoards[test].name);
         // printf("connect4CountMax: %d\n", connect4CountMax);
         // printf("connect3CountMax: %d\n", connect3CountMax);
         // printf("connect4CountMin: %d\n", connect4CountMin);
         // printf("connect3CountMin: %d\n", connect3CountMin);
+        
     }
+    return checksum;
 }
 int main(void)
 {
@@ -289,68 +293,13 @@ int main(void)
     clock_t start_time = clock();
 
 
-    // char board[ROWS * COLS] = {0} ; 
-    // int  nextFreeRow[COLS] = {0} ;       // to keep track of the top row of each column in the board
-
-    // initializeTopRow(nextFreeRow, COLS);
-    // initializeBoard(board, ROWS, COLS);
-
-    // // fill out the connect board with a full finshed game state
-    // board[0]= 'o';
-    // board[1]= 'o';
-    // board[2]= EMPTY;
-    // board[3]= EMPTY;
-    // //
-    // board[4]= 'x';
-    // board[5]= 'o';
-    // board[6]= 'x';
-    // board[7]= 'x';
-    // //
-    // board[8]= 'x';
-    // board[9]= 'x';
-    // board[10]= 'x';
-    // board[11]= 'o';
-    // //
-    // board[12]= 'x';
-    // board[13]= 'x';
-    // board[14]= 'x';     
-    // board[15]= 'x';
-
-    // printBoard(board , ROWS , COLS) ;   
-    // printf("\n\n");
-
-    // nextFreeRow[0] = -1 ; 
-    // nextFreeRow[1] = -1;
-    // nextFreeRow[2] = 0;
-    // nextFreeRow[3] = 0 ;
-
-    // printTopRow(nextFreeRow, COLS);
-    // printf("\n\n");
-
-    // next move (rowCursor - windows)
-
-    // scanning 
-
-    
-    // int connect4CountMax = 0 ; 
-    // int connect3CountMax = 0 ; 
-
-    // int connect4CountMin = 0 ; 
-    // int connect3CountMin = 0 ; 
-
-    // scanHorizontal(board, nextFreeRow, &connect4CountMax, &connect3CountMax, &connect4CountMin, &connect3CountMin);
-    // scanVertical(board, nextFreeRow, &connect4CountMax, &connect3CountMax, &connect4CountMin, &connect3CountMin);
-    // scanDiagonal(board, nextFreeRow, &connect4CountMax, &connect3CountMax, &connect4CountMin, &connect3CountMin);
-    
-
-    // printf("connect4CountMax: %d\n", connect4CountMax);
-    // printf("connect3CountMax: %d\n", connect3CountMax);
-    // printf("connect4CountMin: %d\n", connect4CountMin);
-    // printf("connect3CountMin: %d\n", connect3CountMin);
+    unsigned long long checksum = 0 ;
     for (int i = 0; i < 1000000; ++i) {
-        runScanTests();
+        checksum += runScanTests();
     }
-  
+    printf("All scan tests passed successfully.\n");
+    // print the last checksum to verify the correctness of the scan tests
+    printf("Last checksum: %llu\n", checksum);  
 
     clock_t end_time = clock();
     double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
