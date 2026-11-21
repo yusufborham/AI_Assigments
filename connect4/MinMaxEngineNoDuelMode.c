@@ -90,6 +90,34 @@ void printBoard(char *board, int rows, int cols)
     puts("+");
 }
 
+void printBoardFile(FILE *file, const char *board, int rows, int cols)
+{
+    fprintf(file, "Current Board State:\n");
+
+    fprintf(file, "  ");
+    for (int col = 0; col < cols; ++col) {
+        fprintf(file, "%-4d", col);
+    }
+    fputc('\n', file);
+
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            fprintf(file, "+---");
+        }
+        fprintf(file, "+\n");
+
+        for (int col = 0; col < cols; ++col) {
+            fprintf(file, "| %c ", board[row * cols + col]);
+        }
+        fprintf(file, "|\n");
+    }
+
+    for (int col = 0; col < cols; ++col) {
+        fprintf(file, "+---");
+    }
+    fprintf(file, "+\n");
+}
+
 void printTopRow(int *topRow , int cols)
 {
     printf("Current Top Row State:\n");
@@ -414,7 +442,9 @@ bool isBoardFull(int *nextFreeRow){
 }
 
 // if max is true, it means that the next move is for the maximizing player (X), otherwise it's for the minimizing player (O)
-int minmax(char *board, int *nextFreeRow, int playsleft , bool max , bool isRoot , int *bestCol , int *colOrder , int alpha , int beta , bool useAlphaBeta){
+int minmax(char *board, int *nextFreeRow, int playsleft , bool max , bool isRoot , int *bestCol , int *colOrder , int alpha , int beta , bool useAlphaBeta , FILE *file){
+    // fprintf(file , "LAYER NUMBER %d \n" , 4 - playsleft );
+    // printBoardFile(file , board , ROWS , COLS);
     if (playsleft == 0 || isBoardFull(nextFreeRow)) {
         CacheEntry *entry = &cache[cacheIndex(board)];
 
@@ -424,6 +454,8 @@ int minmax(char *board, int *nextFreeRow, int playsleft , bool max , bool isRoot
         }
 
         int score = getUtility(board, nextFreeRow, max);
+
+        // fprintf(file , "The Score Here Is %d \n" , score);
 
         memcpy(entry->board, board, ROWS * COLS);
         entry->maxToMove = max;
@@ -446,7 +478,7 @@ int minmax(char *board, int *nextFreeRow, int playsleft , bool max , bool isRoot
         int row = nextFreeRow[col] ; 
         addDisk(board , row , col , max);
         nextFreeRow[col] = row -1  ;
-        int childScore = minmax(board , nextFreeRow , playsleft -1 , !max , false , bestCol , colOrder , alpha , beta , useAlphaBeta);
+        int childScore = minmax(board , nextFreeRow , playsleft -1 , !max , false , bestCol , colOrder , alpha , beta , useAlphaBeta , file);
         removeDisk(board , row , col);
         nextFreeRow[col] = row ;
 
@@ -496,7 +528,7 @@ static void sendGuiState(const char *board, const int *nextFreeRow,
 }
 // le7ad hena dah code lel GUI for sending dataaaa 
 
-static int runGui(int depth , bool useAlphaBeta)
+static int runGui(int depth , bool useAlphaBeta , FILE *file)
 {
     char board[ROWS * COLS];
     int nextFreeRow[COLS];
@@ -509,9 +541,13 @@ static int runGui(int depth , bool useAlphaBeta)
     printf("READY %d %d\n", ROWS, COLS);
     sendGuiState(board, nextFreeRow, 'x', -1);
 
+    // fprintf(file, "READY \n");
+    int reply = 1 ;
+
     while (!isBoardFull(nextFreeRow)) {
         int bestCol = -1;
-        minmax(board, nextFreeRow, playsleft, true, true, &bestCol, colOrder ,INT_MIN , INT_MAX , useAlphaBeta );
+        // fprintf(file ,"REPLY NUMBER %d \n" ,reply++);
+        minmax(board, nextFreeRow, playsleft, true, true, &bestCol, colOrder ,INT_MIN , INT_MAX , useAlphaBeta , file );
         if (bestCol < 0 || bestCol >= COLS || nextFreeRow[bestCol] < 0) {
             fputs("Minimax did not return a legal column.\n", stderr);
             return EXIT_FAILURE;
@@ -548,10 +584,13 @@ static int runGui(int depth , bool useAlphaBeta)
 }
 
 int main(int argc, char **argv)
-{
+{   
+    FILE *file = fopen("GameTree.txt", "w");
+    
+
     if (argc > 1 && strcmp(argv[1], "--gui") == 0) {
         if (argc == 2) {
-            return runGui(8, true);
+            return runGui(8, true , file);
         }
 
         if (argc != 4) {
@@ -567,7 +606,9 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-        return runGui((int)depth, strcmp(argv[3], "1") == 0);
+
+        return runGui((int)depth, strcmp(argv[3], "1") == 0 , file);
+        fclose(file);
     }
 
    
