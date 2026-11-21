@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect Four · Search Tree</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #101322; --panel: #181d32; --card: #1f2640; --line: #465575;
+  --ink: #f5f6ff; --muted: #b1bad2; --x: #55e9c4; --o: #ff947f;
+  --leaf: #d6b3ff; --accent: #f6d276;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 system-ui, sans-serif; }
+header { padding: 25px clamp(16px, 4vw, 56px); background: #171d34; border-bottom: 1px solid #34415e; }
+h1 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 40px); letter-spacing: -.025em; }
+h2 { margin: 0 0 10px; font-size: 20px; }
+#summary { margin: 0; color: var(--muted); }
+#note { margin: 7px 0 0; color: var(--accent); }
+#note:empty { display: none; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px;
+  padding: 18px clamp(12px, 3vw, 40px); align-items: start; }
+section, aside { min-width: 0; border: 1px solid #303d59; background: var(--panel); border-radius: 14px; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px; }
+button { color: var(--ink); background: #263151; border: 1px solid #47587a;
+  border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button:disabled { opacity: .5; cursor: default; }
+#scroll { min-height: 340px; max-height: 70vh; overflow: auto; border-top: 1px solid #303d59;
+  background-color: #14192b; background-image: radial-gradient(#313c58 1px, transparent 1px);
+  background-size: 18px 18px; border-radius: 0 0 14px 14px; }
+#tree { padding: 24px; width: max-content; min-width: 100%; }
+.branch { display: flex; flex-direction: column; align-items: center; position: relative;
+  padding: 24px 5px 0; flex: 0 0 auto; }
+#tree > .branch { padding-top: 0; }
+.children { display: flex; justify-content: center; width: max-content; position: relative; padding: 14px 0 0; }
+.children::before { content: ""; position: absolute; height: 14px; border-left: 1px solid var(--line); top: 0; left: 50%; }
+.children > .branch::before, .children > .branch::after { content: ""; position: absolute; top: 0;
+  width: 50%; height: 24px; border-top: 1px solid var(--line); }
+.children > .branch::before { right: 50%; }
+.children > .branch::after { left: 50%; border-left: 1px solid var(--line); }
+.children > .branch:first-child::before { border-top: 0; }
+.children > .branch:last-child::after { border-top: 0; }
+.head { width: 142px; }
+.node { display: block; width: 100%; text-align: left; background: var(--card); padding: 8px 10px;
+  border: 1px solid #485681; border-top: 3px solid var(--player); }
+.node[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+.head:has(.node[aria-pressed="true"]) { z-index: 1; }
+.node span { display: block; }
+.node .small { font-size: 12px; color: var(--muted); }
+.node .score { margin-top: 4px; color: var(--leaf); font-weight: 700; }
+.node .chosen { color: var(--accent); font-weight: 700; }
+.node.x { --player: var(--x); }
+.node.o { --player: var(--o); }
+.toggle { margin-top: 7px; width: 100%; color: var(--muted); font-size: 12px; padding: 3px 5px; }
+aside { padding: 16px; }
+#detail, #detailscore { margin: 0 0 8px; }
+#detailscore { color: var(--leaf); font-weight: 650; }
+#board { display: grid; gap: 5px; background: #263457; border-radius: 10px;
+  padding: 8px; margin: 12px 0; }
+.cell { aspect-ratio: 1; border-radius: 50%; background: #11182e; }
+.cell.x { background: var(--x); }
+.cell.o { background: var(--o); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--muted); }
+.legend b { color: var(--player); }
+@media (max-width: 800px) { main { grid-template-columns: 1fr; } #scroll { max-height: 55vh; }
+  #board { max-width: 260px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Connect Four Search Tree</h1>
+  <p id="summary"></p>
+  <p id="note"></p>
+</header>
+<main>
+  <section aria-label="Search tree">
+    <div class="toolbar">
+      <button id="expand" type="button">Expand one level</button>
+      <button id="collapse" type="button">Collapse branches</button>
+      <div class="legend">
+        <span><b style="--player: var(--x)">X</b> maximizing</span>
+        <span><b style="--player: var(--o)">O</b> minimizing</span>
+      </div>
+    </div>
+    <div id="scroll"><div id="tree"></div></div>
+  </section>
+  <aside aria-label="Selected node">
+    <h2 id="detailtitle">Root position</h2>
+    <p id="detail"></p>
+    <p id="detailscore"></p>
+    <div id="board" role="img"></div>
+  </aside>
+</main>
+<script>
+const data = {"reply":3,"search_depth":2,"trace_layers":2,"best_column":3,"rows":6,"cols":7,"nodes":[{"layer":0,"parent":null,"children":[1,9,12,14,21,23,28],"board":".....................................xxo.o","column":null,"leaf_score":null,"value":1,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[2,3,4,5,6,7,8],"board":"...............................x.....xxo.o","column":3,"leaf_score":null,"value":1,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"........................o......x.....xxo.o","column":3,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"..............................ox.....xxo.o","column":2,"leaf_score":2,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"...............................xo....xxo.o","column":4,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"...............................x....oxxo.o","column":1,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"...............................x.....xxooo","column":5,"leaf_score":2,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"...............................x...o.xxo.o","column":0,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":1,"children":[],"board":"...............................x..o..xxo.o","column":6,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[10,11],"board":"..............................x......xxo.o","column":2,"leaf_score":null,"value":1,"bound":"upper","cutoff":true},{"layer":2,"parent":9,"children":[],"board":"..............................xo.....xxo.o","column":3,"leaf_score":2,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":9,"children":[],"board":".......................o......x......xxo.o","column":2,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[13],"board":"................................x....xxo.o","column":4,"leaf_score":null,"value":1,"bound":"upper","cutoff":true},{"layer":2,"parent":12,"children":[],"board":"...............................ox....xxo.o","column":3,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[15,16,17,18,19,20],"board":"....................................xxxo.o","column":1,"leaf_score":null,"value":0,"bound":"upper","cutoff":true},{"layer":2,"parent":14,"children":[],"board":"...............................o....xxxo.o","column":3,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":14,"children":[],"board":"..............................o.....xxxo.o","column":2,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":14,"children":[],"board":"................................o...xxxo.o","column":4,"leaf_score":833,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":14,"children":[],"board":".............................o......xxxo.o","column":1,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":14,"children":[],"board":"....................................xxxooo","column":5,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":14,"children":[],"board":"...................................oxxxo.o","column":0,"leaf_score":0,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[22],"board":".....................................xxoxo","column":5,"leaf_score":null,"value":1,"bound":"upper","cutoff":true},{"layer":2,"parent":21,"children":[],"board":"...............................o.....xxoxo","column":3,"leaf_score":1,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[24,25,26,27],"board":"...................................x.xxo.o","column":0,"leaf_score":null,"value":0,"bound":"upper","cutoff":true},{"layer":2,"parent":23,"children":[],"board":"...............................o...x.xxo.o","column":3,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":23,"children":[],"board":"..............................o....x.xxo.o","column":2,"leaf_score":834,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":23,"children":[],"board":"................................o..x.xxo.o","column":4,"leaf_score":833,"value":null,"bound":"exact","cutoff":false},{"layer":2,"parent":23,"children":[],"board":"...................................xoxxo.o","column":1,"leaf_score":0,"value":null,"bound":"exact","cutoff":false},{"layer":1,"parent":0,"children":[29],"board":"..................................x..xxo.o","column":6,"leaf_score":null,"value":1,"bound":"upper","cutoff":true},{"layer":2,"parent":28,"children":[],"board":"...............................o..x..xxo.o","column":3,"leaf_score":1,"value":null,"bound":"exact","cutoff":false}]};
+const nodes = data.nodes;
+const expanded = new Set([0]);
+let selected = 0;
+const byId = name => document.getElementById(name);
+const tree = byId("tree");
+const scroll = byId("scroll");
+const expand = byId("expand");
+const collapse = byId("collapse");
+
+function el(tag, className, text) {
+  const item = document.createElement(tag);
+  if (className) item.className = className;
+  if (text !== undefined) item.textContent = text;
+  return item;
+}
+function nextPlayer(node) { return node.layer % 2 === 0 ? "X" : "O"; }
+function moveLabel(node) {
+  if (node.parent === null) return "Root position";
+  const player = nextPlayer(nodes[node.parent]);
+  return node.column === null ? player + " moves" : player + " → column " + node.column;
+}
+function scoreLabel(node) {
+  if (node.leaf_score !== null) return "Leaf score " + node.leaf_score;
+  if (node.value !== null) {
+    const sign = node.bound === "lower" ? " ≥ " : node.bound === "upper" ? " ≤ " : " ";
+    return (node.children.length ? "Search value" : "Frontier value") + sign + node.value;
+  }
+  return node.children.length ? "" : "Score unavailable";
+}
+function select(id) {
+  selected = id;
+  const node = nodes[id];
+  tree.querySelector('[aria-pressed="true"]')?.setAttribute("aria-pressed", "false");
+  byId("node-" + id)?.setAttribute("aria-pressed", "true");
+  byId("detailtitle").textContent = moveLabel(node);
+  byId("detail").textContent = "Layer " + node.layer + " · " + nextPlayer(node) + " to move"
+    + (node.cutoff ? " · Alpha-beta cutoff" : "");
+  let value = scoreLabel(node);
+  if (!node.children.length && node.leaf_score === null && node.value !== null)
+    value += " · Deeper nodes hidden";
+  byId("detailscore").textContent = value;
+  const board = byId("board");
+  board.style.gridTemplateColumns = "repeat(" + data.cols + ", 1fr)";
+  board.setAttribute("aria-label", Array.from({length: data.rows}, (_, row) =>
+    node.board.slice(row * data.cols, (row + 1) * data.cols).split("").join(" ")
+  ).join(", "));
+  board.replaceChildren(...Array.from(node.board, cell => el("span", "cell " + (cell === "." ? "" : cell))));
+}
+function renderBranch(id) {
+  const node = nodes[id];
+  const branch = el("div", "branch");
+  const head = el("div", "head");
+  const button = el("button", "node " + nextPlayer(node).toLowerCase());
+  button.id = "node-" + id;
+  button.type = "button";
+  button.setAttribute("aria-pressed", String(id === selected));
+  button.append(el("span", "", moveLabel(node)), el("span", "small", "Layer " + node.layer));
+  const score = scoreLabel(node);
+  if (score) button.append(el("span", "small score", score));
+  if (node.parent === 0 && node.column === data.best_column)
+    button.append(el("span", "small chosen", "Chosen move"));
+  button.addEventListener("click", () => select(id));
+  head.append(button);
+  branch.append(head);
+  if (node.children.length) {
+    const open = expanded.has(id);
+    const toggle = el("button", "toggle", (open ? "− Hide " : "+ Show ") + node.children.length + " branches");
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.onclick = () => {
+      if (open) expanded.delete(id);
+      else expanded.add(id);
+      select(id);
+      render();
+      byId("node-" + id).parentElement.querySelector(".toggle").focus();
+    };
+    head.append(toggle);
+    if (open) {
+      const children = el("div", "children");
+      for (const child of node.children) children.append(renderBranch(child));
+      branch.append(children);
+    }
+  }
+  return branch;
+}
+function visible() {
+  const ids = [];
+  const queue = [0];
+  for (let i = 0; i < queue.length; ++i) {
+    const id = queue[i];
+    ids.push(id);
+    if (expanded.has(id)) queue.push(...nodes[id].children);
+  }
+  return ids;
+}
+function render() {
+  tree.replaceChildren(renderBranch(0));
+  select(selected);
+  expand.disabled = !visible().some(id => !expanded.has(id) && nodes[id].children.length);
+  collapse.disabled = expanded.size === 0;
+}
+expand.onclick = () => {
+  for (const id of visible()) if (nodes[id].children.length) expanded.add(id);
+  render();
+};
+collapse.onclick = () => {
+  expanded.clear();
+  selected = 0;
+  render();
+};
+const summary = ["AI reply " + data.reply, nodes.length + " recorded positions",
+  nodes.filter(node => node.leaf_score !== null).length + " scored leaves"];
+if (data.search_depth !== undefined) summary.push("Search depth " + data.search_depth);
+if (data.best_column !== undefined) summary.push("Chosen column " + data.best_column);
+byId("summary").textContent = summary.join(" · ");
+const notes = [];
+if (data.trace_layers !== undefined && data.trace_layers < data.search_depth)
+  notes.push("The trace stops at layer " + data.trace_layers + ". Frontier values come from deeper search.");
+if (data.trace_limit || data.viewer_limit)
+  notes.push("The node limit hid some branches.");
+if (data.search_depth === undefined)
+  notes.push("Older logs can omit cached leaf scores. Missing values are marked as unavailable.");
+byId("note").textContent = notes.join(" ");
+render();
+scroll.scrollLeft = Math.max(0, (scroll.scrollWidth - scroll.clientWidth) / 2);
+</script>
+</body>
+</html>
