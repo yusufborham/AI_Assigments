@@ -178,7 +178,7 @@ void scanDiagonal(const char *board, const int *nextFreeRow, ScanResult *result)
     }
 }
 
-ScanResult evaluateBoard(const char *board, const int *nextFreeRow)
+ScanResult evaluateBoard(const char *board, const int *nextFreeRow) // function to evaluate the board and return the scan result
 {
     ScanResult result = {0};
 
@@ -189,17 +189,25 @@ ScanResult evaluateBoard(const char *board, const int *nextFreeRow)
     return result;
 }
 
-int getImmediateGain(const ScanResult *result, bool maxToMove)
+int getImmediateGain(const ScanResult *result, bool maxToMove)  // function to get the immediate gain 
+// imediate gain is the maximum number of connect fours that can be achieved by the next move
 {
     return maxToMove ? result->immediateGainMax : -result->immediateGainMin;
 }
 
 
-int getScore(const ScanResult *result, bool maxToMove)
+int getScore(const ScanResult *result, bool maxToMove) // just criteria for the scoring could be changed at any time 
 {
     int score = 10 * (result->connect4CountMax - result->connect4CountMin)
               +  5 * getImmediateGain(result, maxToMove)
               +      (result->connect3CountMax - result->connect3CountMin);
+    return score;
+}
+
+int getUtility(const char *board , const int *nextFreeRow, bool maxToMove) // a lumped function that gives us the score of a given board
+{
+    ScanResult result = evaluateBoard(board, nextFreeRow);
+    int score = getScore(&result, maxToMove);
     return score;
 }
 
@@ -285,19 +293,111 @@ void runScanTests(void)
 
 }
 
+void addDisk(char *board , int row , int col , bool player ){
+    if (player)
+        board[row*COLS + col] = 'x' ;
+    else
+        board[row*COLS + col] = 'o' ;
+}
+
+void removeDisk(char *board , int row , int col){
+    board[row*COLS + col] = EMPTY ;
+}
+
+bool isBoardFull(int *nextFreeRow){
+    for (int i = 0 ; i < COLS ; i++){
+        if (nextFreeRow[i] >= 0)
+            return false ;
+    }
+    return true ;
+}
+
+// if max is true, it means that the next move is for the maximizing player (X), otherwise it's for the minimizing player (O)
+int minmax(char *board, int *nextFreeRow, int playsleft , bool max , bool isRoot , int *bestCol){
+    if (isBoardFull(nextFreeRow) || playsleft == 0){
+        int score = getUtility(board, nextFreeRow, max);
+        return score;
+    }
+    int BestScore ;
+    if (max)
+        BestScore = -1000000 ;
+    else 
+        BestScore = 1000000 ;
+    
+    // loop on all the legal columns only
+    for (int col = 0 ; col < COLS ; col++){
+        if (nextFreeRow[col] < 0 )
+            continue;
+        int row = nextFreeRow[col] ;
+        addDisk(board , row , col , max);
+        nextFreeRow[col] = row -1  ;
+        int childScore = minmax(board , nextFreeRow , playsleft -1 , !max , false , bestCol);
+        removeDisk(board , row , col);
+        nextFreeRow[col] = row ;
+
+        if (max && childScore > BestScore){
+            BestScore = childScore ;
+            if (isRoot){
+                *bestCol = col ; // update the best column to play for the maximizing player
+            }
+        }
+            
+        else if (!max && childScore < BestScore)
+            BestScore = childScore ;
+        
+    }
+    return BestScore ;
+        
+}
+
 int main(void)
 {
    
     clock_t start_time = clock();
 
-    runScanTests();
+    char board[ROWS * COLS];
+    int nextFreeRow[COLS];
+
+    initializeBoard(board, ROWS, COLS);
+    initializeTopRow(nextFreeRow, COLS);
+
+    for (int turns = 0 ; turns < 21 ; turns++){
+        int bestCol = -1;
+        int playsleft = 8; // Set the desired depth for the minimax search
+        int score = minmax(board, nextFreeRow, playsleft, true, true, &bestCol);
+        addDisk(board, nextFreeRow[bestCol], bestCol, true);
+        nextFreeRow[bestCol]--;
+        printBoard(board, ROWS, COLS);
+        printf("\n");
+        int opponentCol = -1 ;
+        printf("Enter opponent's move (0-6): ");
+        scanf("%d", &opponentCol);
+        if (opponentCol < 0 || opponentCol >= COLS || nextFreeRow[opponentCol] < 0){
+            printf("Invalid move by opponent. Exiting.\n");
+            return EXIT_FAILURE;
+        }
+        addDisk(board, nextFreeRow[opponentCol], opponentCol, false);
+        nextFreeRow[opponentCol]--;
+        printBoard(board, ROWS, COLS);
+        printf("\n");
+    }
+
+    printf("end of the game the winner is \n");
+    int finalScore = getUtility(board, nextFreeRow, true);
+    if (finalScore > 0)
+        printf("X wins!\n");
+    else if (finalScore < 0)
+        printf("O wins!\n");
+    else
+        printf("It's a draw!\n");
     
+
+
     clock_t end_time = clock();
 
-    printf("All scan tests passed successfully.\n");
    
     double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-    printf("The program took %f milliseconds to execute.\n", time_taken * 1000);
+    printf("The program took %f seconds to execute.\n", time_taken);
 
     return EXIT_SUCCESS;
 }
