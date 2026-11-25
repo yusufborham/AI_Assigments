@@ -25,6 +25,22 @@ bash runGame.sh 8 true
 | 1 | `8` | Search depth in plies. One ply is one move by either player. |
 | 2 | `true` | Enable alpha-beta pruning. Use `false` to disable it. |
 
+### Play with expectiminimax
+
+Run with the default depth of `8` and alpha-beta enabled.
+
+```bash
+bash runGame.sh --expectiminimax
+```
+
+To set the depth and alpha-beta option explicitly, put `--expectiminimax` last.
+
+```bash
+bash runGame.sh 8 true --expectiminimax
+```
+
+Use `false` in place of `true` to disable pruning. Both commands open the same GUI. In this mode, either player's disc can land in an available neighboring column.
+
 ## Watch two AIs play
 
 - For the first time the terminal and change your directory to the one you cloned the project in
